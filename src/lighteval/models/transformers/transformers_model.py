@@ -37,6 +37,7 @@ from tqdm import tqdm
 from transformers import (
     AutoConfig,
     AutoModelForCausalLM,
+    AutoModelForImageTextToText,
     AutoTokenizer,
     BitsAndBytesConfig,
     PretrainedConfig,
@@ -398,16 +399,40 @@ class TransformersModel(LightevalModel):
         if "quantization_config" not in pretrained_config.to_dict():
             kwargs["quantization_config"] = quantization_config
 
-        model = AutoModelForCausalLM.from_pretrained(
-            self.config.model_name,
-            revision=revision,
-            max_memory=max_memory,
-            device_map=device_map,
-            # tp_plan="auto",
-            torch_dtype=torch_dtype,
-            trust_remote_code=self.config.trust_remote_code,
-            **kwargs,
-        )
+        try:
+            model = AutoModelForCausalLM.from_pretrained(
+                self.config.model_name,
+                revision=revision,
+                max_memory=max_memory,
+                device_map=device_map,
+                # tp_plan="auto",
+                torch_dtype=torch_dtype,
+                trust_remote_code=self.config.trust_remote_code,
+                **kwargs,
+            )
+        except ValueError as e:
+            if "Unrecognized configuration class" not in str(e):
+                raise
+            logger.warning(
+                f"AutoModelForCausalLM does not support this model's config ({pretrained_config.__class__.__name__}). "
+                "Falling back to AutoModelForImageTextToText and extracting the language model backbone."
+            )
+            composite_model = AutoModelForImageTextToText.from_pretrained(
+                self.config.model_name,
+                revision=revision,
+                max_memory=max_memory,
+                device_map=device_map,
+                torch_dtype=torch_dtype,
+                trust_remote_code=self.config.trust_remote_code,
+                **kwargs,
+            )
+            if hasattr(composite_model, "language_model"):
+                model = composite_model.language_model
+            else:
+                raise ValueError(
+                    f"Loaded model via AutoModelForImageTextToText but it has no 'language_model' attribute. "
+                    f"Cannot extract a causal LM backbone from {type(composite_model).__name__}."
+                ) from e
         # model.to(self.device)
         model.eval()
         torch.set_grad_enabled(False)
