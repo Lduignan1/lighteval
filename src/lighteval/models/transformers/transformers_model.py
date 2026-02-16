@@ -415,9 +415,9 @@ class TransformersModel(LightevalModel):
                 raise
             logger.warning(
                 f"AutoModelForCausalLM does not support this model's config ({pretrained_config.__class__.__name__}). "
-                "Falling back to AutoModelForImageTextToText and extracting the language model backbone."
+                "Falling back to AutoModelForImageTextToText for text-only evaluation."
             )
-            composite_model = AutoModelForImageTextToText.from_pretrained(
+            model = AutoModelForImageTextToText.from_pretrained(
                 self.config.model_name,
                 revision=revision,
                 max_memory=max_memory,
@@ -426,13 +426,6 @@ class TransformersModel(LightevalModel):
                 trust_remote_code=self.config.trust_remote_code,
                 **kwargs,
             )
-            if hasattr(composite_model, "language_model"):
-                model = composite_model.language_model
-            else:
-                raise ValueError(
-                    f"Loaded model via AutoModelForImageTextToText but it has no 'language_model' attribute. "
-                    f"Cannot extract a causal LM backbone from {type(composite_model).__name__}."
-                ) from e
         # model.to(self.device)
         model.eval()
         torch.set_grad_enabled(False)
