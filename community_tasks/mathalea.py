@@ -138,7 +138,7 @@ def _make_generative_task(subset, alias, prompt_key):
         evaluation_splits=["test"],
         few_shots_split="dev",
         few_shots_select="sequential",
-        generation_size=32768,
+        generation_size=4096,
         metrics=[mathalea_generative_metric],
         stop_sequence=[],
         version=0,
