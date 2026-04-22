@@ -761,10 +761,11 @@ class Faithfulness(SampleLevelComputation):
             prediction = self.normalize_pred(prediction)
         return self.summac.score_one(inp, prediction)["score"]
 
+
 class RULER(SampleLevelComputation):
     def __init__(
         self,
-        aggregation_method = "any",
+        aggregation_method="any",
     ):
         """RULER exact match class.
 
@@ -772,9 +773,7 @@ class RULER(SampleLevelComputation):
             aggregation_method (str, optional): Method to aggregate multiple golds. Can be 'any' or 'all'. Defaults to 'any'.
         """
         if aggregation_method not in ["any", "all"]:
-            raise ValueError(
-                f"aggregation_method must be one of 'any' or 'all'. Was {aggregation_method} instead."
-            )
+            raise ValueError(f"aggregation_method must be one of 'any' or 'all'. Was {aggregation_method} instead.")
         self.aggregation_method = aggregation_method
 
     def compute(self, doc: Doc, model_response: ModelResponse, **kwargs) -> float:
@@ -794,6 +793,7 @@ class RULER(SampleLevelComputation):
             return max([1.0 if r.lower() in predictions[0].lower() else 0.0 for r in golds])
         elif self.aggregation_method == "all":
             return sum([1.0 if r.lower() in predictions[0].lower() else 0.0 for r in golds]) / len(golds)
+
 
 class BLEURT(SampleLevelComputation):
     def __init__(self):

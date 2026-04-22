@@ -1,3 +1,26 @@
+# MIT License
+
+# Copyright (c) 2026 OpenLLM-France
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+
 """
 name:
 MathAlea
@@ -47,6 +70,7 @@ GRADE_LEVELS = ["cinquième", "quatrième", "troisième", "première", "terminal
 
 def remove_accents(text: str) -> str:
     return "".join(c for c in unicodedata.normalize("NFD", text) if unicodedata.category(c) != "Mn")
+
 
 FORMULATIONS = [MCFFormulation(), CFFormulation(), HybridFormulation()]
 
@@ -103,14 +127,12 @@ def _make_generative_prompt_fn(system_prompt):
         valid_letters = "".join(LETTER_INDICES[: len(choices)])
 
         instruction = (
-            "Réponds à la question à choix multiple suivante. La dernière ligne de votre réponse "
+            "Répondez à la question à choix multiple suivante. La dernière ligne de votre réponse "
             "doit être au format suivant : 'Réponse : $LETTER' (sans les guillemets) où LETTER "
             f"est l'une des lettres {valid_letters}. Réfléchissez étape par étape avant de répondre."
         )
 
-        choices_str = "\n".join(
-            f"{letter}) {choice.strip()}" for letter, choice in zip(LETTER_INDICES, choices)
-        )
+        choices_str = "\n".join(f"{letter}) {choice.strip()}" for letter, choice in zip(LETTER_INDICES, choices))
 
         query = f"{prefix}{instruction}\n\n{line['question'].strip()}\n\n{choices_str}"
 
