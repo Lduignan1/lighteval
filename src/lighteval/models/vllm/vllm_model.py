@@ -268,7 +268,7 @@ class VLLMModel(LightevalModel):
     def max_length(self) -> int:
         return self._max_length
 
-    def _create_auto_model(self, config: VLLMModelConfig) -> Optional[LLM]:
+    def _create_auto_model(self, config: VLLMModelConfig) -> Optional[LLM]:  # noqa: C901
         """Creates an instance of the pretrained HF model.
 
         Args:

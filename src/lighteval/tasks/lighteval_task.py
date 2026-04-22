@@ -368,9 +368,6 @@ class LightevalTask:
         Returns:
             list[Doc]: List of documents ready for evaluation with few-shot examples
                 and generation parameters configured.
-
-        Raises:
-            ValueError: If no documents are available for evaluation.
         """
         eval_docs = self.eval_docs()
 

@@ -790,9 +790,10 @@ class RULER(SampleLevelComputation):
         golds = doc.get_golds()
         predictions = model_response.final_text
         if self.aggregation_method == "any":
-            return max([1.0 if r.lower() in predictions[0].lower() else 0.0 for r in golds])
+            return max(1.0 if r.lower() in predictions[0].lower() else 0.0 for r in golds)
         elif self.aggregation_method == "all":
-            return sum([1.0 if r.lower() in predictions[0].lower() else 0.0 for r in golds]) / len(golds)
+            return sum(1.0 if r.lower() in predictions[0].lower() else 0.0 for r in golds) / len(golds)
+
 
 
 class BLEURT(SampleLevelComputation):
@@ -1531,6 +1532,7 @@ class COMETMetric(SampleLevelComputation):
         Args:
             doc (Doc): The document containing gold references and source text in doc.specific.
             model_response (ModelResponse): The model's response containing predictions.
+            **kwargs: Unused, accepted for API compatibility.
 
         Returns:
             float: COMET score scaled to 0-100 (higher is better).
@@ -1588,6 +1590,7 @@ class MetricXMetric(SampleLevelComputation):
         Args:
             doc (Doc): The document containing gold references and source text in doc.specific.
             model_response (ModelResponse): The model's response containing predictions.
+            **kwargs: Unused, accepted for API compatibility.
 
         Returns:
             float: MetricX score (lower is better, typically 0-25).
