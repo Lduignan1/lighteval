@@ -73,17 +73,13 @@ class Exo7MCMetric(SampleLevelComputation):
     the total probability mass on the correct answers.
     """
 
-    def compute(self, doc: Doc, model_response: ModelResponse, **kwargs):
-        # Prefer per-choice token counts from the model wrapper; fall back to
-        # character normalization if the backend didn't populate output_tokens.
-        if model_response.output_tokens and all(len(t) > 0 for t in model_response.output_tokens):
-            normalization = LogProbTokenNorm()
-        else:
-            normalization = LogProbCharNorm()
+    def __init__(self, normalization):
+        self.normalization = normalization
 
+    def compute(self, doc: Doc, model_response: ModelResponse, **kwargs):
         norm_logprobs = np.array(
             normalize_log_probs(
-                normalization,
+                self.normalization,
                 choices_logprob=model_response.logprobs,
                 unconditioned_logprob=None,
                 choices_text=doc.choices,
@@ -98,9 +94,17 @@ class Exo7MCMetric(SampleLevelComputation):
         return float(np.sum(probs_norm[labels == 1]))
 
 
-exo7_mc_metric = SampleLevelMetric(
-    metric_name="acc",
-    sample_level_fn=Exo7MCMetric(),
+exo7_mc_metric_token = SampleLevelMetric(
+    metric_name="acc_norm_token",
+    sample_level_fn=Exo7MCMetric(LogProbTokenNorm()),
+    category=SamplingMethod.LOGPROBS,
+    corpus_level_fn=np.mean,
+    higher_is_better=True,
+)
+
+exo7_mc_metric_char = SampleLevelMetric(
+    metric_name="acc_norm_char",
+    sample_level_fn=Exo7MCMetric(LogProbCharNorm()),
     category=SamplingMethod.LOGPROBS,
     corpus_level_fn=np.mean,
     higher_is_better=True,
@@ -269,7 +273,7 @@ def _make_task(formulation):
         few_shots_split=None,
         few_shots_select=None,
         generation_size=1,
-        metrics=[exo7_mc_metric],
+        metrics=[exo7_mc_metric_token, exo7_mc_metric_char],
         stop_sequence=["\n"],
         version=0,
     )
