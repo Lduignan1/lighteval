@@ -1,3 +1,25 @@
+# MIT License
+
+# Copyright (c) 2026 OpenLLM-France
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 """
 name:
 Exo7
@@ -27,6 +49,7 @@ import re
 import numpy as np
 
 from lighteval.metrics.metrics_sample import SampleLevelComputation
+from lighteval.metrics.normalizations import LogProbCharNorm, LogProbTokenNorm, normalize_log_probs
 from lighteval.metrics.utils.metric_utils import SampleLevelMetric
 from lighteval.models.model_output import ModelResponse
 from lighteval.tasks.default_prompts import LETTER_INDICES
@@ -50,20 +73,24 @@ class Exo7MCMetric(SampleLevelComputation):
     the total probability mass on the correct answers.
     """
 
-    def compute(self, model_response: ModelResponse, doc: Doc, **kwargs):
-        logprobs = np.array(model_response.logprobs)
-
-        # Length-normalize per choice. Prefer per-choice token counts from the
-        # model wrapper; fall back to character lengths of the formulation
-        # targets if the backend didn't populate output_tokens.
-        if model_response.output_tokens:
-            lengths = np.array([max(len(t), 1) for t in model_response.output_tokens])
+    def compute(self, doc: Doc, model_response: ModelResponse, **kwargs):
+        # Prefer per-choice token counts from the model wrapper; fall back to
+        # character normalization if the backend didn't populate output_tokens.
+        if model_response.output_tokens and all(len(t) > 0 for t in model_response.output_tokens):
+            normalization = LogProbTokenNorm()
         else:
-            lengths = np.array([max(len(c), 1) for c in doc.choices])
+            normalization = LogProbCharNorm()
 
-        norm_logprobs = logprobs / lengths
+        norm_logprobs = np.array(
+            normalize_log_probs(
+                normalization,
+                choices_logprob=model_response.logprobs,
+                unconditioned_logprob=None,
+                choices_text=doc.choices,
+                choices_tokens=model_response.output_tokens,
+            )
+        )
 
-        # Stability shift + softmax
         probs = np.exp(norm_logprobs - np.max(norm_logprobs))
         probs_norm = probs / np.sum(probs)
 
@@ -116,7 +143,7 @@ def _extract_letters(text: str, valid: set) -> set:
 class Exo7GenerativeF1(SampleLevelComputation):
     """Set-F1 between predicted and gold letter sets."""
 
-    def compute(self, model_response: ModelResponse, doc: Doc, **kwargs):
+    def compute(self, doc: Doc, model_response: ModelResponse, **kwargs):
         pred_text = model_response.text[0] if model_response.text else ""
         valid = set(doc.choices)
         gold = set(doc.specific["correct_letters"])
@@ -136,7 +163,7 @@ class Exo7GenerativeF1(SampleLevelComputation):
 class Exo7GenerativeExactMatch(SampleLevelComputation):
     """1.0 iff the predicted letter set exactly matches the gold set."""
 
-    def compute(self, model_response: ModelResponse, doc: Doc, **kwargs):
+    def compute(self, doc: Doc, model_response: ModelResponse, **kwargs):
         pred_text = model_response.text[0] if model_response.text else ""
         valid = set(doc.choices)
         gold = set(doc.specific["correct_letters"])
@@ -164,8 +191,7 @@ exo7_generative_exact_metric = SampleLevelMetric(
 # --- Prompt function ---
 
 INSTRUCTION = (
-    "Pour la question suivante, une ou plusieurs propositions peuvent être correctes. "
-    "Évaluez chaque proposition."
+    "Pour la question suivante, une ou plusieurs propositions peuvent être correctes. Évaluez chaque proposition."
 )
 
 
@@ -207,9 +233,7 @@ def _make_generative_prompt_fn():
         correct_letters = [letters[i] for i, label in enumerate(labels) if label == 1]
 
         instruction = GENERATIVE_INSTRUCTION_TEMPLATE.format(valid_letters=", ".join(letters))
-        choices_str = "\n".join(
-            f"{letter}) {choice.strip()}" for letter, choice in zip(letters, choices)
-        )
+        choices_str = "\n".join(f"{letter}) {choice.strip()}" for letter, choice in zip(letters, choices))
         query = f"{instruction}\n\n{line['question'].strip()}\n\n{choices_str}"
 
         doc = Doc(
