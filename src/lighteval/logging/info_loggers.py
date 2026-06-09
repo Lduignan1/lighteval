@@ -100,7 +100,11 @@ class GeneralConfigLogger:
         except git.InvalidGitRepositoryError:
             repo = None
 
-        self.lighteval_sha = repo.git.rev_parse("HEAD") if repo is not None else "?"
+        try:
+            self.lighteval_sha = repo.git.rev_parse("HEAD") if repo is not None else "?"
+        except Exception:
+            # git binary may be unavailable (e.g. HPC compute nodes); SHA is non-essential
+            self.lighteval_sha = "?"
         self.start_time = time.perf_counter()
 
     def log_args_info(
