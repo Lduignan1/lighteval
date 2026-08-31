@@ -11358,7 +11358,7 @@ mgsm_rev2_fr_lighteval = LightevalTaskConfig(
     evaluation_splits=["test"],
     few_shots_split=None,
     few_shots_select=None,
-    generation_size=None,
+    generation_size=2048,
     metrics=[
         Metrics.exact_match(
             sample_params={
